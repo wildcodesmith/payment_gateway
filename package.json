@@ -1,0 +1,23 @@
+{
+  "name": "payment_gateway",
+  "version": "1.0.0",
+  "description": "a secure paying webapp",
+  "license": "ISC",
+  "author": "sumit royal",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "crypto": "^1.0.1",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "mongoose": "^9.9.2",
+    "path": "^0.12.7",
+    "razorpay": "^2.9.8",
+    "tailwindcss": "^4.3.3",
+    "url": "^0.11.4"
+  }
+}
