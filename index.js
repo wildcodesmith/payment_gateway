@@ -6,6 +6,8 @@ import { dirname } from 'path';
 import mongoose from 'mongoose';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
+import QRCode from 'qrcode';
+import PDFDocument from 'pdfkit'
 
 
 const app = express();
@@ -25,8 +27,6 @@ mongoose.connect(dbURL)
 import ITEM_PRICE from './model/item-price.js';
 import USER_ACCOUNT from './model/userAccounts.js';
 
-let a = await ITEM_PRICE.findOne({ itemName: "banana" })
-console.log(a)
 
 //razorpay 
 const razorpay = new Razorpay({
@@ -34,6 +34,12 @@ const razorpay = new Razorpay({
     key_secret: process.env.RAZORPAY_TEST_KEY_SECRET
 })
 
+// Captures rawBody buffer required by Razorpay signature verification
+app.use(express.json({
+    verify: (req, res, buf) => {
+        req.rawBody = buf;
+    }
+}));
 app.use(express.static('public'))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
@@ -41,10 +47,9 @@ app.use(express.urlencoded({ extended: true }))
 //handling item post request
 app.post('/item-checkout', async (req, res) => {
 
-    let itemCheckout = req.body
-    console.log(itemCheckout)
-    let item = await ITEM_PRICE.findOne({ 'itemName': req.body.itemName })
-    if (item) {
+    let item = await ITEM_PRICE.findOne({ 'itemName': req.body.userEvent })
+    console.log(item)
+    if (item && req.body.userName && req.body.userRollNumber && req.body.userEvent && req.body.userMail) {
         let itemPrice = item.itemPrice;
 
         try {
@@ -56,6 +61,17 @@ app.post('/item-checkout', async (req, res) => {
             };
 
             const order = await razorpay.orders.create(razorpayOptions);
+
+            await USER_ACCOUNT.create({
+                userName: req.body.userName,
+                userRollNumber: req.body.userRollNumber,
+                userEvent: req.body.userEvent,
+                userMail: req.body.userMail,
+                isPaid: false,
+                orderId: order.id,
+
+            });
+
             res.json({
                 success: true,
                 orderId: order.id,
@@ -63,6 +79,7 @@ app.post('/item-checkout', async (req, res) => {
                 keyId: process.env.RAZORPAY_TEST_KEY_ID
             })
         } catch (error) {
+            console.log(error)
             res
                 .status(500)
                 .json({ 'message': 'internal server error', status: 500 })
@@ -76,7 +93,7 @@ app.post('/item-checkout', async (req, res) => {
 
 })
 
-//payment verification post request by frontened
+// payment verification post request by frontened
 app.post('/verify_payments', async (req, res) => {
     try {
         console.log(req.body.userName)
@@ -96,12 +113,19 @@ app.post('/verify_payments', async (req, res) => {
             isPaymentAuthentic = crypto.timingSafeEqual(expectedBuffer, razorpayBuffer)
         }
         if (isPaymentAuthentic) {
-            console.log(`payment authentic for order : ${razorpay_order_id}`);
 
-            return res.status(200).json({
-                success: true,
-                message: "Payment verified successfully"
-            })
+            try {
+                let user = await  USER_ACCOUNT.findOne({ orderId: razorpay_order_id });
+                await user.updateOne({ isPaid: true, paymentId: razorpay_payment_id })
+                return res.status(200).json({
+                    success: true,
+                    message: "Payment verified successfully"
+                })
+            } catch (error) {
+                console.log(error)
+                res.status(500).json({ "message": "internal server error" });
+            }
+
         } else {
             console.log('signature mismatch! fake payment attempt')
             return res.status(400).json({
@@ -116,34 +140,43 @@ app.post('/verify_payments', async (req, res) => {
     }
 })
 //payment verification by razorpay to the server
-app.post('/razorpay-webhook', (req, res) => {
+app.post('/razorpay-webhook', async (req, res) => {
     const razorpaySignature = req.headers['x-razorpay-signature'];
     const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
-
-    const expectedSignature = crypto
-        .createHmac('sha256', webhookSecret)
-        .update(JSON.stringify(req.body))
-        .digest('hex')
-    let isPaymentAuthentic = false;
-    const expectedBuffer = Buffer.from(expectedSignature, 'hex');
-    const razorpayBuffer = Buffer.from(razorpaySignature, 'hex')
-    if (expectedBuffer.length === razorpayBuffer.length) {
-        isPaymentAuthentic = crypto.timingSafeEqual(expectedBuffer, razorpayBuffer)
-
+    console.log("heelo its freaking working")
+    if (!razorpaySignature || !webhookSecret) {
+        return res.status(400).send('Missing signature or secret');
     }
+
+    // Validate signature using raw body buffer
+    const isPaymentAuthentic = Razorpay.validateWebhookSignature(
+        req.rawBody,
+        razorpaySignature,
+        webhookSecret
+    );
     if (isPaymentAuthentic) {
         console.log('webhook verified! Authenticated message from the razorpay')
         if (req.body.event === 'payment.captured') {
-            const paymentDetails = req.body.payload.payment.entity;
-            const orderId = paymentDetails.order_id
-            console.log(`payment successful for order: ${orderId}`);
+            try {
+                const paymentDetails = req.body.payload.payment.entity;
+                const orderId = paymentDetails.order_id
+                console.log(`payment successful for order: ${orderId}`);
 
-            //mongo db update
+                //mongo db update
+                const updatedUserInfo = await USER_ACCOUNT.updateOne(
+                    { orderId: orderId, isPaid: false },
+                    { $set: { isPaid: true, paymentId: paymentDetails.id } }
+                );
+                console.log("database updated successfully", updatedUserInfo)
+                return res.status(200).send('Webhook received successfully');
+            } catch (error) {
+                console.log(error);
+                return res.status(500).json({ "message": "server error" })
+            }
 
-            return res.status(200).send('Webhook received successfully');
         }
     } else {
-        // If signatures don't match, an attacker might be trying to fake a webhook!
+        // If signatures don't match 
         console.log('Webhook signature mismatch! Fake payload detected.');
         return res.status(400).send('Invalid signature');
     }
@@ -156,29 +189,29 @@ app.get('/', (req, res) => {
 app.get('/form', (req, res) => {
     res.sendFile(path.join(__dirname, 'form.html'))
 })
-app.post('/userData', (req, res) => {
+// app.post('/userData', (req, res) => {
 
-    try {
-        // add logic to check the correct mail id 
-        if(req.body.userName && req.body.userRollNumber && req.body.userEvent && req.body.userMail){
-            USER_ACCOUNT.insertMany({
-                    userName : req.body.userName,
-            userRollNumber : req.body.userRollNumber,
-            userEvent : req.body.userEvent,
-            userMail : req.body.userMail,
-            isPaid : false
-            })
-            
-        }
-    } catch (error) {
-        res.status(500).json({ message: 'internal server error', status: 500 })
-    }
+//     try {
+//         // add logic to check the correct mail id 
+//         if(req.body.userName && req.body.userRollNumber && req.body.userEvent && req.body.userMail){
+//             USER_ACCOUNT.insertMany({
+//                     userName : req.body.userName,
+//             userRollNumber : req.body.userRollNumber,
+//             userEvent : req.body.userEvent,
+//             userMail : req.body.userMail,
+//             isPaid : false
+//             })
+
+//         }
+//     } catch (error) {
+//         res.status(500).json({ message: 'internal server error', status: 500 })
+//     }
 
 
-})
+// })
 
-app.get('/gateway' , (req, res) =>{
-    res.sendFile(path.join(__dirname , 'gateway.html'))
+app.get('/gateway', (req, res) => {
+    res.sendFile(path.join(__dirname, 'gateway.html'))
 })
 app.listen(port, () => {
     console.log(`example port listening...`)

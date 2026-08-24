@@ -1,3 +1,4 @@
+
 const payBtn = document.querySelector("#payBtn")
 let itemName = { 'itemName': 'apple' };
  
@@ -10,13 +11,26 @@ const userMail  =document.querySelector('#userMail') ;
 //post request for  payment
 payBtn.addEventListener('click', async () => {
 
+     if(userName.value && userEvent.value && userMail.value && userRollNumber.value ){
+        userInfo = {
+            userName : userName.value,
+            userRollNumber : userRollNumber.value,
+            userEvent : userEvent.value,
+            userMail : userMail.value
+        }
+        console.log(userInfo)
+  
+
+
     let options = {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify(itemName)
+        body: JSON.stringify(userInfo)
+        
     }
+    console.log(userInfo)
 
     let data = await fetch('/item-checkout', options);
     let response = await data.json();
@@ -25,7 +39,9 @@ payBtn.addEventListener('click', async () => {
         alert("could not process order")
         return;
     }
+    
 
+    //razorpay  
     const razorpayOptions = {
         key: response.keyId,
         amount: response.amount,
@@ -60,6 +76,9 @@ payBtn.addEventListener('click', async () => {
     paymentWindow.open();
 
     console.log(response)
+
+     }
+
 })
 
 
