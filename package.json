@@ -16,6 +16,8 @@
     "express": "^5.2.1",
     "mongoose": "^9.9.2",
     "path": "^0.12.7",
+    "pdfkit": "^0.20.1",
+    "qrcode": "^1.5.4",
     "razorpay": "^2.9.8",
     "tailwindcss": "^4.3.3",
     "url": "^0.11.4"

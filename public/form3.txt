@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0,
+                   maximum-scale=1.0, user-scalable=no">
+
+    <title>ENGI 3D</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #eef5ff;
+            font-family: Arial, sans-serif;
+            touch-action: none;
+        }
+
+        #scene {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .hero-content {
+            position: absolute;
+            left: 7%;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 10;
+            pointer-events: none;
+            max-width: 500px;
+        }
+
+        .hero-content h1 {
+            font-size: clamp(45px, 7vw, 90px);
+            line-height: 0.95;
+            font-weight: 900;
+            letter-spacing: -4px;
+            color: #172b4d;
+        }
+
+        .hero-content h1 span {
+            color: #2674ff;
+        }
+
+        .hero-content p {
+            margin-top: 22px;
+            color: #53657d;
+            font-size: clamp(15px, 1.5vw, 20px);
+            line-height: 1.6;
+        }
+
+        .interaction {
+            margin-top: 25px;
+            display: inline-block;
+            padding: 11px 18px;
+            border-radius: 30px;
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: blur(10px);
+            color: #52627a;
+            font-size: 13px;
+            border: 1px solid rgba(40,100,200,0.12);
+        }
+
+        @media (max-width: 700px) {
+
+            .hero-content {
+                left: 6%;
+                top: 12%;
+                transform: none;
+                max-width: 88%;
+            }
+
+            .hero-content h1 {
+                font-size: 48px;
+                letter-spacing: -2px;
+            }
+
+            .hero-content p {
+                margin-top: 12px;
+                font-size: 14px;
+                max-width: 330px;
+            }
+
+            .interaction {
+                margin-top: 14px;
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div id="scene"></div>
+
+<div class="hero-content">
+    <h1>
+        Build.<br>
+        <span>Engineer.</span><br>
+        Create.
+    </h1>
+
+    <p>
+        Engineering ideas transformed into innovation,
+        technology and real-world solutions.
+    </p>
+
+    <div class="interaction">
+        ↔ Drag / Swipe the 3D logo
+    </div>
+</div>
+
+
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+    }
+}
+</script>
+
+
+<script type="module">
+
+import * as THREE from "three";
+
+import { FontLoader } from
+"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/loaders/FontLoader.js";
+
+import { TextGeometry } from
+"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/geometries/TextGeometry.js";
+
+
+// =====================================================
+// BASIC SETUP
+// =====================================================
+
+const container = document.getElementById("scene");
+
+const scene = new THREE.Scene();
+
+scene.background = new THREE.Color(0xeef5ff);
+
+
+// =====================================================
+// CAMERA
+// =====================================================
+
+const camera = new THREE.PerspectiveCamera(
+    45,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    100
+);
+
+camera.position.set(0, 0.5, 10);
+
+
+// =====================================================
+// RENDERER
+// =====================================================
+
+const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    alpha: false,
+    powerPreference: "high-performance"
+});
+
+renderer.setPixelRatio(
+    Math.min(window.devicePixelRatio, 2)
+);
+
+renderer.setSize(
+    window.innerWidth,
+    window.innerHeight
+);
+
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.25;
+
+container.appendChild(renderer.domElement);
+
+
+// =====================================================
+// LIGHTING
+// =====================================================
+
+// Large soft ambient light
+const ambientLight = new THREE.AmbientLight(
+    0xffffff,
+    2.5
+);
+
+scene.add(ambientLight);
+
+
+// Main light
+const keyLight = new THREE.DirectionalLight(
+    0xffffff,
+    4
+);
+
+keyLight.position.set(
+    4,
+    7,
+    8
+);
+
+keyLight.castShadow = true;
+
+scene.add(keyLight);
+
+
+// Blue rim light
+const blueLight = new THREE.PointLight(
+    0x4f8cff,
+    7,
+    20
+);
+
+blueLight.position.set(
+    -5,
+    2,
+    5
+);
+
+scene.add(blueLight);
+
+
+// Secondary light
+const whiteLight = new THREE.PointLight(
+    0xffffff,
+    5,
+    20
+);
+
+whiteLight.position.set(
+    5,
+    -3,
+    3
+);
+
+scene.add(whiteLight);
+
+
+// =====================================================
+// FLOOR
+// =====================================================
+
+const floorGeometry = new THREE.PlaneGeometry(
+    40,
+    40
+);
+
+const floorMaterial = new THREE.MeshStandardMaterial({
+    color: 0xf4f8ff,
+    roughness: 0.85,
+    metalness: 0
+});
+
+const floor = new THREE.Mesh(
+    floorGeometry,
+    floorMaterial
+);
+
+floor.rotation.x = -Math.PI / 2;
+
+floor.position.y = -2.5;
+
+floor.receiveShadow = true;
+
+scene.add(floor);
+
+
+// =====================================================
+// 3D ENGI LOGO
+// =====================================================
+
+const logoGroup = new THREE.Group();
+
+scene.add(logoGroup);
+
+
+// Font
+const loader = new FontLoader();
+
+loader.load(
+    "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/fonts/helvetiker_bold.typeface.json",
+
+    function(font) {
+
+        const geometry = new TextGeometry(
+            "ENGI",
+            {
+                font: font,
+
+                size: 2.15,
+
+                depth: 0.55,
+
+                curveSegments: 16,
+
+                bevelEnabled: true,
+
+                bevelThickness: 0.08,
+
+                bevelSize: 0.045,
+
+                bevelSegments: 5
+            }
+        );
+
+
+        // Center geometry
+        geometry.computeBoundingBox();
+
+        const box = geometry.boundingBox;
+
+        const centerX =
+            (box.max.x + box.min.x) / 2;
+
+        const centerY =
+            (box.max.y + box.min.y) / 2;
+
+
+        geometry.translate(
+            -centerX,
+            -centerY,
+            0
+        );
+
+
+        // Main material
+        const material =
+            new THREE.MeshPhysicalMaterial({
+
+                color: 0x2775ff,
+
+                metalness: 0.35,
+
+                roughness: 0.18,
+
+                clearcoat: 1,
+
+                clearcoatRoughness: 0.08,
+
+                emissive: 0x08245c,
+
+                emissiveIntensity: 0.25
+            });
+
+
+        const logo = new THREE.Mesh(
+            geometry,
+            material
+        );
+
+        logo.castShadow = true;
+
+        logo.receiveShadow = true;
+
+        logoGroup.add(logo);
+
+
+        // =================================================
+        // OUTER GLOW
+        // =================================================
+
+        const glowMaterial =
+            new THREE.MeshBasicMaterial({
+
+                color: 0x4f8cff,
+
+                transparent: true,
+
+                opacity: 0.10,
+
+                side: THREE.BackSide
+            });
+
+
+        const glow =
+            new THREE.Mesh(
+                geometry.clone(),
+                glowMaterial
+            );
+
+        glow.scale.set(
+            1.04,
+            1.04,
+            1.04
+        );
+
+        logoGroup.add(glow);
+
+
+        // =================================================
+        // SMALL ENGINEERING MARK
+        // =================================================
+
+        createEngineeringRing();
+
+    }
+);
+
+
+// =====================================================
+// ENGINEERING RING
+// =====================================================
+
+function createEngineeringRing() {
+
+    const ringGeometry =
+        new THREE.TorusGeometry(
+            3.1,
+            0.025,
+            12,
+            100
+        );
+
+    const ringMaterial =
+        new THREE.MeshBasicMaterial({
+            color: 0x6e9cff,
+            transparent: true,
+            opacity: 0.35
+        });
+
+    const ring =
+        new THREE.Mesh(
+            ringGeometry,
+            ringMaterial
+        );
+
+    ring.rotation.x =
+        Math.PI * 0.35;
+
+    ring.rotation.y =
+        Math.PI * 0.15;
+
+    logoGroup.add(ring);
+
+
+    // Second ring
+    const ring2 =
+        new THREE.Mesh(
+            ringGeometry.clone(),
+            new THREE.MeshBasicMaterial({
+                color: 0x9bbcff,
+                transparent: true,
+                opacity: 0.18
+            })
+        );
+
+    ring2.scale.set(
+        1.15,
+        1.15,
+        1.15
+    );
+
+    ring2.rotation.x =
+        -Math.PI * 0.25;
+
+    ring2.rotation.y =
+        Math.PI * 0.35;
+
+    logoGroup.add(ring2);
+}
+
+
+// =====================================================
+// PARTICLES
+// =====================================================
+
+const particleGeometry =
+    new THREE.BufferGeometry();
+
+const particleCount = 600;
+
+const positions =
+    new Float32Array(
+        particleCount * 3
+    );
+
+for (
+    let i = 0;
+    i < particleCount;
+    i++
+) {
+
+    positions[i * 3] =
+        (Math.random() - 0.5) * 18;
+
+    positions[i * 3 + 1] =
+        (Math.random() - 0.5) * 10;
+
+    positions[i * 3 + 2] =
+        (Math.random() - 0.5) * 10;
+}
+
+particleGeometry.setAttribute(
+    "position",
+    new THREE.BufferAttribute(
+        positions,
+        3
+    )
+);
+
+
+const particleMaterial =
+    new THREE.PointsMaterial({
+
+        color: 0x74a2ff,
+
+        size: 0.025,
+
+        transparent: true,
+
+        opacity: 0.55
+    });
+
+
+const particles =
+    new THREE.Points(
+        particleGeometry,
+        particleMaterial
+    );
+
+scene.add(particles);
+
+
+// =====================================================
+// INTERACTION VARIABLES
+// =====================================================
+
+let targetRotationX = 0;
+let targetRotationY = 0;
+
+let currentRotationX = 0;
+let currentRotationY = 0;
+
+let velocityX = 0;
+let velocityY = 0;
+
+let isDragging = false;
+
+let previousX = 0;
+let previousY = 0;
+
+
+// =====================================================
+// MOUSE
+// =====================================================
+
+renderer.domElement.addEventListener(
+    "pointerdown",
+    (event) => {
+
+        isDragging = true;
+
+        previousX = event.clientX;
+        previousY = event.clientY;
+
+        renderer.domElement.setPointerCapture(
+            event.pointerId
+        );
+    }
+);
+
+
+renderer.domElement.addEventListener(
+    "pointermove",
+    (event) => {
+
+        if (!isDragging) return;
+
+        const dx =
+            event.clientX - previousX;
+
+        const dy =
+            event.clientY - previousY;
+
+        velocityY += dx * 0.008;
+
+        velocityX += dy * 0.008;
+
+        previousX = event.clientX;
+        previousY = event.clientY;
+    }
+);
+
+
+renderer.domElement.addEventListener(
+    "pointerup",
+    (event) => {
+
+        isDragging = false;
+
+        renderer.domElement.releasePointerCapture(
+            event.pointerId
+        );
+    }
+);
+
+
+// =====================================================
+// TOUCH SUPPORT
+// =====================================================
+
+let touchStartX = 0;
+let touchStartY = 0;
+
+let lastTouchX = 0;
+let lastTouchY = 0;
+
+renderer.domElement.addEventListener(
+    "touchstart",
+    (event) => {
+
+        if (event.touches.length !== 1)
+            return;
+
+        const touch =
+            event.touches[0];
+
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+
+        lastTouchX = touch.clientX;
+        lastTouchY = touch.clientY;
+
+        isDragging = true;
+
+    },
+    { passive: false }
+);
+
+
+renderer.domElement.addEventListener(
+    "touchmove",
+    (event) => {
+
+        if (
+            !isDragging ||
+            event.touches.length !== 1
+        )
+            return;
+
+        event.preventDefault();
+
+        const touch =
+            event.touches[0];
+
+        const dx =
+            touch.clientX - lastTouchX;
+
+        const dy =
+            touch.clientY - lastTouchY;
+
+        velocityY += dx * 0.010;
+
+        velocityX += dy * 0.010;
+
+        lastTouchX = touch.clientX;
+        lastTouchY = touch.clientY;
+
+    },
+    { passive: false }
+);
+
+
+renderer.domElement.addEventListener(
+    "touchend",
+    () => {
+
+        isDragging = false;
+
+    },
+    { passive: false }
+);
+
+
+// =====================================================
+// PINCH ZOOM
+// =====================================================
+
+let previousDistance = null;
+
+renderer.domElement.addEventListener(
+    "touchmove",
+    (event) => {
+
+        if (event.touches.length !== 2)
+            return;
+
+        event.preventDefault();
+
+        const t1 =
+            event.touches[0];
+
+        const t2 =
+            event.touches[1];
+
+        const dx =
+            t1.clientX - t2.clientX;
+
+        const dy =
+            t1.clientY - t2.clientY;
+
+        const distance =
+            Math.sqrt(
+                dx * dx +
+                dy * dy
+            );
+
+        if (previousDistance !== null) {
+
+            const difference =
+                distance -
+                previousDistance;
+
+            camera.position.z -=
+                difference * 0.01;
+
+            camera.position.z =
+                THREE.MathUtils.clamp(
+                    camera.position.z,
+                    6,
+                    14
+                );
+        }
+
+        previousDistance = distance;
+
+    },
+    { passive: false }
+);
+
+
+renderer.domElement.addEventListener(
+    "touchend",
+    () => {
+
+        previousDistance = null;
+
+    }
+);
+
+
+// =====================================================
+// MOUSE HOVER
+// =====================================================
+
+window.addEventListener(
+    "mousemove",
+    (event) => {
+
+        if (isDragging)
+            return;
+
+        const x =
+            (event.clientX /
+                window.innerWidth) *
+            2 - 1;
+
+        const y =
+            (event.clientY /
+                window.innerHeight) *
+            2 - 1;
+
+        targetRotationY =
+            x * 0.35;
+
+        targetRotationX =
+            y * 0.20;
+
+    }
+);
+
+
+// =====================================================
+// ANIMATION
+// =====================================================
+
+const clock =
+    new THREE.Clock();
+
+
+function animate() {
+
+    requestAnimationFrame(animate);
+
+
+    const elapsed =
+        clock.getElapsedTime();
+
+
+    // -----------------------------------------------
+    // INERTIA
+    // -----------------------------------------------
+
+    currentRotationX +=
+        velocityX;
+
+    currentRotationY +=
+        velocityY;
+
+
+    velocityX *= 0.92;
+
+    velocityY *= 0.92;
+
+
+    // -----------------------------------------------
+    // NATURAL FLOATING
+    // -----------------------------------------------
+
+    const floatY =
+        Math.sin(elapsed * 1.2) *
+        0.12;
+
+    const floatX =
+        Math.cos(elapsed * 0.8) *
+        0.04;
+
+
+    // -----------------------------------------------
+    // ROTATION
+    // -----------------------------------------------
+
+    logoGroup.rotation.x =
+        currentRotationX * 0.45 +
+        targetRotationX * 0.35;
+
+    logoGroup.rotation.y =
+        currentRotationY * 0.45 +
+        targetRotationY * 0.35;
+
+
+    logoGroup.position.y =
+        floatY;
+
+    logoGroup.position.x =
+        floatX;
+
+
+    // -----------------------------------------------
+    // PARTICLES
+    // -----------------------------------------------
+
+    particles.rotation.y =
+        elapsed * 0.015;
+
+    particles.rotation.x =
+        Math.sin(elapsed * 0.2) *
+        0.05;
+
+
+    // -----------------------------------------------
+    // CAMERA SMOOTHING
+    // -----------------------------------------------
+
+    camera.lookAt(
+        0,
+        0,
+        0
+    );
+
+
+    renderer.render(
+        scene,
+        camera
+    );
+}
+
+
+animate();
+
+
+// =====================================================
+// RESIZE
+// =====================================================
+
+window.addEventListener(
+    "resize",
+    () => {
+
+        camera.aspect =
+            window.innerWidth /
+            window.innerHeight;
+
+        camera.updateProjectionMatrix();
+
+        renderer.setSize(
+            window.innerWidth,
+            window.innerHeight
+        );
+
+        renderer.setPixelRatio(
+            Math.min(
+                window.devicePixelRatio,
+                2
+            )
+        );
+    }
+);
+
+</script>
+
+</body>
+</html>
