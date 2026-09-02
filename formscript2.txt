@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PCB Neon Processor Gateway</title>
+
+  <!-- Tailwind CSS -->
+  <link href="./src/output.css" rel="stylesheet">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+  <style>
+    /* Continuous Normalized Electrical Spark Flowing OUTWARD from Card */
+    @keyframes spark-outward {
+      0%   { stroke-dashoffset: 100; }
+      100% { stroke-dashoffset: 0; }
+    }
+
+    .spark-line {
+      stroke-dasharray: 18 82;
+      animation: spark-outward 2.2s linear infinite;
+      will-change: stroke-dashoffset;
+    }
+    .spark-line-fast {
+      stroke-dasharray: 14 86;
+      animation: spark-outward 1.6s linear infinite;
+      will-change: stroke-dashoffset;
+    }
+    .spark-line-slow {
+      stroke-dasharray: 22 78;
+      animation: spark-outward 3.5s linear infinite;
+      will-change: stroke-dashoffset;
+    }
+
+    /* Outer Card Neon Glow */
+    @keyframes neon-pulse {
+      0%, 100% {
+        box-shadow: 0 0 25px rgba(6, 182, 212, 0.4), inset 0 0 15px rgba(6, 182, 212, 0.2);
+        border-color: rgba(34, 211, 238, 0.9);
+      }
+      50% {
+        box-shadow: 0 0 50px rgba(6, 182, 212, 0.85), inset 0 0 28px rgba(6, 182, 212, 0.4);
+        border-color: rgba(103, 232, 249, 1);
+      }
+    }
+
+    .neon-chip-card {
+      animation: neon-pulse 2.5s ease-in-out infinite;
+      clip-path: polygon(
+        24px 0, calc(100% - 24px) 0,
+        100% 24px, 100% calc(100% - 24px),
+        calc(100% - 24px) 100%, 24px 100%,
+        0 calc(100% - 24px), 0 24px
+      );
+    }
+
+    /* Scan line */
+    @keyframes scan {
+      0%   { transform: translateY(-100%); opacity: 0; }
+      10%  { opacity: 0.15; }
+      90%  { opacity: 0.15; }
+      100% { transform: translateY(100%); opacity: 0; }
+    }
+    .scan-line {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, transparent 40%, rgba(34,211,238,0.15) 50%, transparent 60%);
+      animation: scan 4.5s linear infinite;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* Glitch flicker on title */
+    @keyframes glitch {
+      0%, 90%, 100% { transform: translate(0); }
+      92% { transform: translate(-2px, 1px); }
+      94% { transform: translate(2px, -1px); }
+      96% { transform: translate(-1px, 2px); }
+    }
+    .glitch-title {
+      animation: glitch 6s infinite;
+    }
+
+    /* Input focus energy */
+    .input-energy {
+      position: relative;
+    }
+    .input-energy::after {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 0.5rem;
+      background: linear-gradient(90deg, transparent, #22d3ee, transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: -1;
+      filter: blur(4px);
+    }
+    .input-energy:focus-within::after {
+      opacity: 0.7;
+    }
+
+    /* Progress rail */
+    .progress-rail {
+      height: 2px;
+      background: rgba(6, 182, 212, 0.15);
+      border-radius: 1px;
+      overflow: hidden;
+      margin-top: 1.5rem;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #0891b2, #22d3ee, #67e8f9);
+      box-shadow: 0 0 12px #22d3ee;
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Charge button */
+    .charge-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 3px;
+      width: 0%;
+      background: linear-gradient(90deg, #22d3ee, #a5f3fc);
+      transition: width 0.05s linear;
+      box-shadow: 0 0 10px #22d3ee;
+    }
+
+    /* Particle burst */
+    .particle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: #22d3ee;
+      border-radius: 50%;
+      pointer-events: none;
+      box-shadow: 0 0 8px #22d3ee;
+    }
+
+    /* Custom select arrow */
+    select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2322d3ee' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 2.5rem;
+    }
+
+    /* Valid / invalid states */
+    .field-valid {
+      border-color: #22d3ee !important;
+      box-shadow: 0 0 18px rgba(34, 211, 238, 0.35);
+    }
+    .field-invalid {
+      border-color: #f43f5e !important;
+      box-shadow: 0 0 18px rgba(244, 63, 94, 0.35);
+    }
+
+    /* Cursor glow */
+    .cursor-glow {
+      position: fixed;
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(34,211,238,0.12) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 1;
+      transform: translate(-50%, -50%);
+      transition: opacity 0.3s;
+    }
+  </style>
+</head>
+
+<body class="bg-black text-cyan-100 flex items-center justify-center min-h-screen p-4 overflow-x-hidden font-['Share_Tech_Mono'] selection:bg-cyan-500 selection:text-black">
+
+  <!-- Cursor glow -->
+  <div id="cursorGlow" class="cursor-glow opacity-0"></div>
+
+  <!-- ULTRA-DENSE CYAN PCB CIRCUIT GRID -->
+  <div class="fixed inset-0 pointer-events-none opacity-85 flex items-center justify-center overflow-hidden">
+    <svg id="circuitSvg" class="w-[1400px] h-[900px] min-w-[1200px]" viewBox="0 0 1400 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="neon-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#67e8f9" />
+          <stop offset="50%" stop-color="#22d3ee" />
+          <stop offset="100%" stop-color="#0891b2" />
+        </linearGradient>
+      </defs>
+
+      <!-- STATIC BUS TRACES -->
+      <g stroke="#0e3a43" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M 450 450 L 50 450" />
+        <path d="M 450 430 L 310 430 Q 295 430 285 420 L 260 390 Q 250 380 235 380 L 50 380" />
+        <path d="M 450 410 L 330 410 Q 315 410 305 395 L 275 350 Q 265 340 250 340 L 50 340" />
+        <path d="M 450 390 L 350 390 Q 335 390 325 375 L 295 310 Q 285 300 270 300 L 50 300" />
+        <path d="M 450 370 L 370 370 Q 355 370 345 350 L 315 270 Q 305 260 290 260 L 50 260" />
+        <path d="M 450 470 L 310 470 Q 295 470 285 480 L 260 510 Q 250 520 235 520 L 50 520" />
+        <path d="M 450 490 L 330 490 Q 315 490 305 505 L 275 550 Q 265 560 250 560 L 50 560" />
+        <path d="M 450 510 L 350 510 Q 335 510 325 525 L 295 585 Q 285 600 270 600 L 50 600" />
+        <path d="M 450 530 L 370 530 Q 355 530 345 550 L 315 630 Q 305 640 290 640 L 50 640" />
+
+        <path d="M 950 450 L 1350 450" />
+        <path d="M 950 430 L 1090 430 Q 1105 430 1115 420 L 1140 390 Q 1150 380 1165 380 L 1350 380" />
+        <path d="M 950 410 L 1070 410 Q 1085 410 1095 395 L 1125 350 Q 1135 340 1150 340 L 1350 340" />
+        <path d="M 950 390 L 1050 390 Q 1065 390 1075 375 L 1105 310 Q 1115 300 1130 300 L 1350 300" />
+        <path d="M 950 370 L 1030 370 Q 1045 370 1055 350 L 1085 270 Q 1095 260 1110 260 L 1350 260" />
+        <path d="M 950 470 L 1090 470 Q 1105 470 1115 480 L 1140 510 Q 1150 520 1165 520 L 1350 520" />
+        <path d="M 950 490 L 1070 490 Q 1085 490 1095 505 L 1125 550 Q 1135 560 1150 560 L 1350 560" />
+        <path d="M 950 510 L 1050 510 Q 1065 510 1075 525 L 1105 585 Q 1115 600 1130 600 L 1350 600" />
+        <path d="M 950 530 L 1030 530 Q 1045 530 1055 550 L 1085 630 Q 1095 640 1110 640 L 1350 640" />
+
+        <path d="M 700 200 L 700 30" />
+        <path d="M 670 200 L 670 130 Q 670 115 660 105 L 630 75 Q 620 65 605 65 L 520 65" />
+        <path d="M 640 200 L 640 150 Q 640 135 625 120 L 590 85 Q 575 75 560 75 L 400 75" />
+        <path d="M 730 200 L 730 130 Q 730 115 740 105 L 770 75 Q 780 65 795 65 L 880 65" />
+        <path d="M 760 200 L 760 150 Q 760 135 775 120 L 810 85 Q 825 75 840 75 L 1000 75" />
+
+        <path d="M 700 700 L 700 870" />
+        <path d="M 670 700 L 670 770 Q 670 785 660 795 L 630 825 Q 620 835 605 835 L 520 835" />
+        <path d="M 640 700 L 640 750 Q 640 765 625 780 L 590 815 Q 575 825 560 825 L 400 825" />
+        <path d="M 730 700 L 730 770 Q 730 785 740 795 L 770 825 Q 780 835 795 835 L 880 835" />
+        <path d="M 760 700 L 760 750 Q 760 765 775 780 L 810 815 Q 825 825 840 825 L 1000 825" />
+      </g>
+
+      <!-- ANIMATED SPARKS -->
+      <g id="sparkGroup" stroke="url(#neon-cyan)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path pathLength="100" d="M 450 450 L 50 450" class="spark-line-fast" />
+        <path pathLength="100" d="M 450 430 L 310 430 Q 295 430 285 420 L 260 390 Q 250 380 235 380 L 50 380" class="spark-line" />
+        <path pathLength="100" d="M 450 390 L 350 390 Q 335 390 325 375 L 295 310 Q 285 300 270 300 L 50 300" class="spark-line-slow" />
+        <path pathLength="100" d="M 450 470 L 310 470 Q 295 470 285 480 L 260 510 Q 250 520 235 520 L 50 520" class="spark-line-fast" />
+        <path pathLength="100" d="M 450 510 L 350 510 Q 335 510 325 525 L 295 585 Q 285 600 270 600 L 50 600" class="spark-line" />
+
+        <path pathLength="100" d="M 950 450 L 1350 450" class="spark-line" />
+        <path pathLength="100" d="M 950 430 L 1090 430 Q 1105 430 1115 420 L 1140 390 Q 1150 380 1165 380 L 1350 380" class="spark-line-fast" />
+        <path pathLength="100" d="M 950 390 L 1050 390 Q 1065 390 1075 375 L 1105 310 Q 1115 300 1130 300 L 1350 300" class="spark-line" />
+        <path pathLength="100" d="M 950 470 L 1090 470 Q 1105 470 1115 480 L 1140 510 Q 1150 520 1165 520 L 1350 520" class="spark-line-slow" />
+        <path pathLength="100" d="M 950 510 L 1050 510 Q 1065 510 1075 525 L 1105 585 Q 1115 600 1130 600 L 1350 600" class="spark-line-fast" />
+
+        <path pathLength="100" d="M 700 200 L 700 30" class="spark-line-fast" />
+        <path pathLength="100" d="M 670 200 L 670 130 Q 670 115 660 105 L 630 75 Q 620 65 605 65 L 520 65" class="spark-line" />
+        <path pathLength="100" d="M 730 200 L 730 130 Q 730 115 740 105 L 770 75 Q 780 65 795 65 L 880 65" class="spark-line-slow" />
+
+        <path pathLength="100" d="M 700 700 L 700 870" class="spark-line" />
+        <path pathLength="100" d="M 670 700 L 670 770 Q 670 785 660 795 L 630 825 Q 620 835 605 835 L 520 835" class="spark-line-fast" />
+        <path pathLength="100" d="M 760 700 L 760 750 Q 760 765 775 780 L 810 815 Q 825 825 840 825 L 1000 825" class="spark-line" />
+      </g>
+
+      <!-- PCB Node Vias -->
+      <g fill="#22d3ee" id="viaGroup">
+        <circle cx="450" cy="450" r="4" />
+        <circle cx="450" cy="430" r="3" />
+        <circle cx="450" cy="390" r="3" />
+        <circle cx="450" cy="470" r="3" />
+        <circle cx="450" cy="510" r="3" />
+        <circle cx="950" cy="450" r="4" />
+        <circle cx="950" cy="430" r="3" />
+        <circle cx="950" cy="390" r="3" />
+        <circle cx="950" cy="470" r="3" />
+        <circle cx="950" cy="510" r="3" />
+        <circle cx="700" cy="200" r="4" />
+        <circle cx="700" cy="700" r="4" />
+      </g>
+    </svg>
+  </div>
+
+  <!-- Ambient Glow -->
+  <div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+  <!-- NEON CHAMFERED PROCESSOR CARD -->
+  <div class="relative w-full max-w-md p-1 bg-cyan-400/80 neon-chip-card z-10">
+    <div class="relative w-full bg-slate-950/95 backdrop-blur-2xl p-6 sm:p-8 font-['Share_Tech_Mono'] overflow-hidden">
+
+      <!-- Scan line overlay -->
+      <div class="scan-line"></div>
+
+      <!-- Left & Right Pins -->
+      <div class="absolute left-1.5 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-20">
+        <span class="w-1 h-3 bg-cyan-400 shadow-[0_0_8px_#22d3ee] pin"></span>
+        <span class="w-1 h-3 bg-cyan-400/60 pin"></span>
+        <span class="w-1 h-3 bg-cyan-400 shadow-[0_0_8px_#22d3ee] pin"></span>
+        <span class="w-1 h-3 bg-cyan-400/60 pin"></span>
+      </div>
+      <div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-20">
+        <span class="w-1 h-3 bg-cyan-400/60 pin"></span>
+        <span class="w-1 h-3 bg-cyan-400 shadow-[0_0_8px_#22d3ee] pin"></span>
+        <span class="w-1 h-3 bg-cyan-400/60 pin"></span>
+        <span class="w-1 h-3 bg-cyan-400 shadow-[0_0_8px_#22d3ee] pin"></span>
+      </div>
+
+      <!-- Header -->
+      <div class="mb-5 text-center relative z-10">
+        <div class="inline-flex items-center gap-2 px-3 py-0.5 rounded bg-cyan-950/80 border border-cyan-400/60 text-[10px] text-cyan-300 mb-2 shadow-[0_0_10px_rgba(34,211,238,0.3)]">
+          <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
+          CPU_SOCKET // 0x2026
+        </div>
+        <h2 class="font-['Orbitron'] text-xl sm:text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-white to-cyan-400 uppercase drop-shadow-[0_0_12px_rgba(34,211,238,0.6)] glitch-title">
+          EVENT MATRIX
+        </h2>
+        <p class="text-[11px] text-cyan-400/70 mt-0.5">REGISTER NODE PARAMETERS</p>
+      </div>
+
+      <!-- Progress rail -->
+      <div class="progress-rail relative z-10">
+        <div id="progressFill" class="progress-fill"></div>
+      </div>
+      <div class="flex justify-between text-[9px] text-cyan-500/60 mt-1 mb-4 relative z-10">
+        <span>FIELDS_LOCKED</span>
+        <span id="progressLabel">0 / 4</span>
+      </div>
+
+      <!-- Form -->
+      <form class="space-y-4 relative z-10" id="form" novalidate>
+        <!-- 01 Name -->
+        <div class="input-energy">
+          <label class="block text-[10px] font-bold text-cyan-300 uppercase tracking-widest mb-1 flex justify-between">
+            <span>[01] Full Name</span>
+            <span class="text-cyan-500/60 flex items-center gap-1">
+              <span id="nameCount">0</span> chars · REQ
+            </span>
+          </label>
+          <input type="text" placeholder="Caroline" required id="userName" autocomplete="name"
+            class="w-full bg-slate-900/90 border border-cyan-500/40 rounded-lg px-3.5 py-2.5 text-xs text-cyan-100 placeholder-slate-600 focus:outline-none focus:border-cyan-300 focus:ring-1 focus:ring-cyan-300 focus:shadow-[0_0_20px_rgba(34,211,238,0.4)] transition-all" />
+        </div>
+
+        <!-- 02 Roll -->
+        <div class="input-energy">
+          <label class="block text-[10px] font-bold text-cyan-300 uppercase tracking-widest mb-1 flex justify-between">
+            <span>[02] Roll Number</span>
+            <span class="text-cyan-500/60">REQ</span>
+          </label>
+          <input type="text" placeholder="251cv153" required id="userRollNumber" autocomplete="off"
+            class="w-full bg-slate-900/90 border border-cyan-500/40 rounded-lg px-3.5 py-2.5 text-xs text-cyan-100 placeholder-slate-600 focus:outline-none focus:border-cyan-300 focus:ring-1 focus:ring-cyan-300 focus:shadow-[0_0_20px_rgba(34,211,238,0.4)] transition-all" />
+        </div>
+
+        <!-- 03 Event -->
+        <div class="input-energy">
+          <label class="block text-[10px] font-bold text-cyan-300 uppercase tracking-widest mb-1 flex justify-between">
+            <span>[03] Event</span>
+            <span class="text-cyan-500/60">REQ</span>
+          </label>
+          <select name="choices" required id="userEvent"
+            class="w-full bg-slate-900/90 border border-cyan-500/40 rounded-lg px-3.5 py-2.5 text-xs text-cyan-100 focus:outline-none focus:border-cyan-300 focus:ring-1 focus:ring-cyan-300 focus:shadow-[0_0_20px_rgba(34,211,238,0.4)] transition-all">
+            <option value="" disabled selected>Select event node…</option>
+            <option value="hackathon event">Hackathon event</option>
+            <option value="beach event">Beach event</option>
+          </select>
+        </div>
+
+        <!-- 04 Email -->
+        <div class="input-energy">
+          <label class="block text-[10px] font-bold text-cyan-300 uppercase tracking-widest mb-1 flex justify-between">
+            <span>[04] College Email ID</span>
+            <span class="text-cyan-500/60">REQ</span>
+          </label>
+          <input type="email" placeholder="caroline@nitk.edu.in" required id="userMail" autocomplete="email"
+            class="w-full bg-slate-900/90 border border-cyan-500/40 rounded-lg px-3.5 py-2.5 text-xs text-cyan-100 placeholder-slate-600 focus:outline-none focus:border-cyan-300 focus:ring-1 focus:ring-cyan-300 focus:shadow-[0_0_20px_rgba(34,211,238,0.4)] transition-all" />
+        </div>
+
+        <!-- Charge / Pay Button -->
+        <button type="button" id="payBtn"
+          class="relative w-full mt-3 py-3.5 px-6 bg-cyan-950 border-2 border-cyan-400 text-cyan-200 font-['Orbitron'] font-bold text-xs tracking-widest uppercase transition-all duration-300 hover:bg-cyan-400 hover:text-black hover:shadow-[0_0_30px_rgba(34,211,238,0.9)] active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(34,211,238,0.3)] overflow-hidden select-none">
+          <span id="btnText">HOLD TO CHARGE → PAY</span>
+          <div id="chargeBar" class="charge-bar"></div>
+        </button>
+      </form>
+
+      <!-- Footer Status -->
+      <div class="mt-6 pt-3 border-t border-cyan-500/30 flex items-center justify-between text-[9px] text-cyan-400/80 relative z-10">
+        <span class="flex items-center gap-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+          <span id="statusText">BUS_CLK: 4.8GHZ</span>
+        </span>
+        <span id="sparkStatus">OUTWARD_SPARKS: ACTIVE</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========== INTERACTIVITY ENGINE ==========
+    const form = document.getElementById('form');
+    const fields = {
+      name: document.getElementById('userName'),
+      roll: document.getElementById('userRollNumber'),
+      event: document.getElementById('userEvent'),
+      mail: document.getElementById('userMail')
+    };
+    const progressFill = document.getElementById('progressFill');
+    const progressLabel = document.getElementById('progressLabel');
+    const nameCount = document.getElementById('nameCount');
+    const payBtn = document.getElementById('payBtn');
+    const btnText = document.getElementById('btnText');
+    const chargeBar = document.getElementById('chargeBar');
+    const statusText = document.getElementById('statusText');
+    const cursorGlow = document.getElementById('cursorGlow');
+    const sparkGroup = document.getElementById('sparkGroup');
+
+    // ---- Cursor glow ----
+    let mouseX = 0, mouseY = 0;
+    document.addEventListener('mousemove', (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      cursorGlow.style.left = mouseX + 'px';
+      cursorGlow.style.top = mouseY + 'px';
+      cursorGlow.style.opacity = '1';
+    });
+    document.addEventListener('mouseleave', () => {
+      cursorGlow.style.opacity = '0';
+    });
+
+    // ---- Field validation & progress ----
+    function isValid(field) {
+      if (field === fields.name) return field.value.trim().length >= 2;
+      if (field === fields.roll) return field.value.trim().length >= 3;
+      if (field === fields.event) return field.value !== '';
+      if (field === fields.mail) return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value);
+      return false;
+    }
+
+    function updateProgress() {
+      let valid = 0;
+      Object.values(fields).forEach(f => {
+        if (isValid(f)) {
+          valid++;
+          f.classList.add('field-valid');
+          f.classList.remove('field-invalid');
+        } else if (f.value.length > 0) {
+          f.classList.add('field-invalid');
+          f.classList.remove('field-valid');
+        } else {
+          f.classList.remove('field-valid', 'field-invalid');
+        }
+      });
+      const pct = (valid / 4) * 100;
+      progressFill.style.width = pct + '%';
+      progressLabel.textContent = `${valid} / 4`;
+      if (valid === 4) {
+        statusText.textContent = 'ALL NODES LOCKED • READY';
+        statusText.classList.add('text-cyan-300');
+      } else {
+        statusText.textContent = 'BUS_CLK: 4.8GHZ';
+        statusText.classList.remove('text-cyan-300');
+      }
+    }
+
+    fields.name.addEventListener('input', () => {
+      nameCount.textContent = fields.name.value.length;
+      updateProgress();
+    });
+    Object.values(fields).forEach(f => {
+      f.addEventListener('input', updateProgress);
+      f.addEventListener('change', updateProgress);
+      f.addEventListener('blur', updateProgress);
+    });
+
+    // ---- Pin flicker on focus ----
+    document.querySelectorAll('input, select').forEach(el => {
+      el.addEventListener('focus', () => {
+        document.querySelectorAll('.pin').forEach((p, i) => {
+          setTimeout(() => {
+            p.style.boxShadow = '0 0 12px #22d3ee';
+            p.style.background = '#22d3ee';
+            setTimeout(() => {
+              p.style.boxShadow = '';
+              p.style.background = '';
+            }, 300);
+          }, i * 40);
+        });
+      });
+    });
+
+    // ---- Charge-to-pay button ----
+    let charge = 0;
+    let charging = false;
+    let chargeInterval = null;
+
+    function startCharge() {
+      if (Object.values(fields).every(isValid) === false) {
+        // shake invalid fields
+        Object.values(fields).forEach(f => {
+          if (!isValid(f)) {
+            f.classList.add('field-invalid');
+            f.animate([
+              { transform: 'translateX(0)' },
+              { transform: 'translateX(-6px)' },
+              { transform: 'translateX(6px)' },
+              { transform: 'translateX(0)' }
+            ], { duration: 300, iterations: 2 });
+          }
+        });
+        statusText.textContent = 'INCOMPLETE PARAMETERS';
+        return;
+      }
+      charging = true;
+      btnText.textContent = 'CHARGING…';
+      chargeInterval = setInterval(() => {
+        charge = Math.min(100, charge + 2.2);
+        chargeBar.style.width = charge + '%';
+        if (charge >= 100) {
+          clearInterval(chargeInterval);
+          btnText.textContent = 'READY — RELEASE TO PAY';
+          payBtn.style.borderColor = '#67e8f9';
+          payBtn.style.boxShadow = '0 0 40px rgba(34,211,238,1)';
+        }
+      }, 30);
+    }
+
+    function endCharge() {
+      if (!charging) return;
+      clearInterval(chargeInterval);
+      if (charge >= 100) {
+        // success burst
+        createBurst(payBtn);
+        btnText.textContent = 'INITIATING PAYMENT…';
+        statusText.textContent = 'TRANSACTION NODE OPEN';
+        // Call your existing Razorpay / formScript logic here
+        // e.g. window.payWithRazorpay?.() or whatever formScript.js exposes
+        setTimeout(() => {
+          // fallback demo
+          alert('Payment flow would start here (connect to your formScript.js)');
+          resetCharge();
+        }, 600);
+      } else {
+        resetCharge();
+      }
+    }
+
+    function resetCharge() {
+      charging = false;
+      charge = 0;
+      chargeBar.style.width = '0%';
+      btnText.textContent = 'HOLD TO CHARGE → PAY';
+      payBtn.style.borderColor = '';
+      payBtn.style.boxShadow = '';
+    }
+
+    payBtn.addEventListener('mousedown', startCharge);
+    payBtn.addEventListener('mouseup', endCharge);
+    payBtn.addEventListener('mouseleave', () => { if (charging) endCharge(); });
+    // Touch support
+    payBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startCharge(); });
+    payBtn.addEventListener('touchend', endCharge);
+
+    // ---- Particle burst ----
+    function createBurst(el) {
+      const rect = el.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      for (let i = 0; i < 28; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        document.body.appendChild(p);
+        const angle = (Math.PI * 2 * i) / 28;
+        const dist = 40 + Math.random() * 80;
+        p.style.left = cx + 'px';
+        p.style.top = cy + 'px';
+        p.animate([
+          { transform: 'translate(0,0) scale(1)', opacity: 1 },
+          { transform: `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist}px) scale(0)`, opacity: 0 }
+        ], { duration: 700 + Math.random()*300, easing: 'cubic-bezier(0.1,0.8,0.2,1)' });
+        setTimeout(() => p.remove(), 1000);
+      }
+    }
+
+    // ---- Occasional via pulse ----
+    setInterval(() => {
+      const vias = document.querySelectorAll('#viaGroup circle');
+      const v = vias[Math.floor(Math.random() * vias.length)];
+      if (v) {
+        v.animate([
+          { r: v.getAttribute('r'), fill: '#22d3ee' },
+          { r: +v.getAttribute('r') + 3, fill: '#a5f3fc' },
+          { r: v.getAttribute('r'), fill: '#22d3ee' }
+        ], { duration: 600 });
+      }
+    }, 1800);
+
+    // Initial progress
+    updateProgress();
+  </script>
+
+  <!-- Keep your original formScript.js if it handles the actual Razorpay call -->
+  <script src="./formScript.js"></script>
+</body>
+</html>

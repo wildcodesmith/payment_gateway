@@ -46,7 +46,7 @@ payBtn.addEventListener('click', async () => {
         key: response.keyId,
         amount: response.amount,
         currency: "INR",
-        description: "purchase" + itemName.itemName,
+        description: "register for" + userEvent.value,
         order_id: response.orderId,
         handler: async function (paymentResults) {
             console.log('payment-proof received : ', paymentResults)
@@ -65,6 +65,7 @@ payBtn.addEventListener('click', async () => {
             const verifyResult = await verifyResponse.json();
             if (verifyResult.success) {
                 alert("successfuly paid the payment.")
+                window.location.href = `/download-ticket/${paymentResults.razorpay_order_id}`
             } else {
                 alert("payment verification failed")
             }
