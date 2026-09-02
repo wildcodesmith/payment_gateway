@@ -97,7 +97,7 @@ app.post('/item-checkout', async (req, res) => {
 // payment verification post request by frontened
 app.post('/verify_payments', async (req, res) => {
     try {
-        console.log(req.body.userName)
+       
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature, itemName } = req.body;
         //generating expected signature 
         const body = razorpay_order_id + '|' + razorpay_payment_id;
@@ -190,26 +190,26 @@ app.get('/', (req, res) => {
 app.get('/form', (req, res) => {
     res.sendFile(path.join(__dirname, 'form.html'))
 })
-app.post('/userData', (req, res) => {
+// app.post('/userData', (req, res) => {
 
-    try {
-        // add logic to check the correct mail id 
-        if(req.body.userName && req.body.userRollNumber && req.body.userEvent && req.body.userMail){
-            USER_ACCOUNT.insertMany({
-                    userName : req.body.userName,
-            userRollNumber : req.body.userRollNumber,
-            userEvent : req.body.userEvent,
-            userMail : req.body.userMail,
-            isPaid : false
-            })
+//     try {
+//         // add logic to check the correct mail id 
+//         if(req.body.userName && req.body.userRollNumber && req.body.userEvent && req.body.userMail){
+//             USER_ACCOUNT.insertMany({
+//                     userName : req.body.userName,
+//             userRollNumber : req.body.userRollNumber,
+//             userEvent : req.body.userEvent,
+//             userMail : req.body.userMail,
+//             isPaid : false
+//             })
 
-        }
-    } catch (error) {
-        res.status(500).json({ message: 'internal server error', status: 500 })
-    }
+//         }
+//     } catch (error) {
+//         res.status(500).json({ message: 'internal server error', status: 500 })
+//     }
 
 
-})
+// })
 
 app.get('/gateway', (req, res) => {
     res.sendFile(path.join(__dirname, 'gateway.html'))
