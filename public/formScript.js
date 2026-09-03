@@ -7,16 +7,23 @@ const userName = document.querySelector('#userName') ;
 const userRollNumber   =document.querySelector('#userRollNumber')  ;
 const userEvent =document.querySelector('#userEvent') ;
 const userMail  =document.querySelector('#userMail') ;
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 
 //post request for  payment
 payBtn.addEventListener('click', async () => {
+    //email format check
+    if(!emailRegex.test(userMail.value.trim())){
+        alert("Please enter valid email address"); 
+        return;
+    }
 
      if(userName.value && userEvent.value && userMail.value && userRollNumber.value ){
         userInfo = {
             userName : userName.value,
             userRollNumber : userRollNumber.value,
             userEvent : userEvent.value,
-            userMail : userMail.value
+            userMail : userMail.value.trim()
         }
         console.log(userInfo)
   
@@ -83,27 +90,27 @@ payBtn.addEventListener('click', async () => {
 })
 
 
-payBtn.addEventListener("click" , async (e)=>{
-    e.preventDefault();
-     if(userName.value && userEvent.value && userMail.value && userRollNumber.value ){
-        userInfo = {
-            userName : userName.value,
-            userRollNumber : userRollNumber.value,
-            userEvent : userEvent.value,
-            userMail : userMail.value
-        }
-        console.log(userInfo)
-        let options = {
-            method : 'POST',
-            headers : {
-                'Content-Type' : 'application/json'
-            },
-            body :  JSON.stringify(userInfo)
-        }
+// payBtn.addEventListener("click" , async (e)=>{
+//     e.preventDefault();
+//      if(userName.value && userEvent.value && userMail.value && userRollNumber.value ){
+//         userInfo = {
+//             userName : userName.value,
+//             userRollNumber : userRollNumber.value,
+//             userEvent : userEvent.value,
+//             userMail : userMail.value
+//         }
+//         console.log(userInfo)
+//         let options = {
+//             method : 'POST',
+//             headers : {
+//                 'Content-Type' : 'application/json'
+//             },
+//             body :  JSON.stringify(userInfo)
+//         }
 
-        let data = await fetch('/userData', options)
-        let response = await data.json();
-        console.log(response);
-     }
-})
+//         let data = await fetch('/userData', options)
+//         let response = await data.json();
+//         console.log(response);
+//      }
+// })
 
